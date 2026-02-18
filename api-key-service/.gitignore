@@ -1,0 +1,82 @@
+# Virtual Environment
+
+venv/
+env/
+ENV/
+
+# Python cache files
+
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+
+# Environment variables
+
+.env
+.env.*
+
+# IDE files
+
+.vscode/
+.idea/
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
+
+# Database files (if using SQLite later)
+
+*.db
+*.sqlite3
+
+# Pytest cache
+
+.pytest_cache/
+
+# Coverage reports
+
+htmlcov/
+.coverage
+.coverage.*
+
+# Build files
+
+dist/
+build/
+*.egg-info/
+
+# Uvicorn / FastAPI cache
+
+*.pid
+
+# Jupyter Notebook checkpoints (if used)
+
+.ipynb_checkpoints/
+
+# Temporary files
+
+*.tmp
+*.temp
+
+# mypy cache (if type checking used later)
+
+.mypy_cache/
+
+# dotenv backups
+
+.env.backup
+
+# Local PostgreSQL config dumps (optional safety)
+
+*.sql
+
+# Mac/Linux hidden files
+
+.*.swp
