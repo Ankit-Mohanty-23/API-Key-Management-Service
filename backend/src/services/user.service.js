@@ -94,7 +94,7 @@ export async function verifyPasswordService(plainPassword, hashPassword){
 
     const isValid = await bcrypt.compare(plainPassword, hashPassword);
 
-    if(isValid){
+    if(!isValid){
         throw new AppError("Invalid email or password", 401);
     }
 
