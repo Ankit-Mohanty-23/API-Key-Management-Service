@@ -18,6 +18,55 @@ export const registerUser = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    user login
+ * @route   POST /user/login
+ * @access  Public
+ */
+
+export const loginUser = asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+
+    const user = await userService.findUserByEmailService(email);
+
+    if(!user){
+        throw new AppError("Invalid email or password", 401);
+    }
+
+    const isPasswordValid = await userService.verifyPasswordService(
+        password,
+        user.password,
+    );
+
+    if(!isPasswordValid){
+        throw new AppError("Invalid Password", 401);
+    }
+
+    const token = jwt.sign(
+        {
+            id: user.id,
+            email: user.email
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: process.env.JWT_EXPIRES_IN || "24h"
+        }
+    );
+
+    const safeUser = {
+        name: user.name,
+        email: user.email
+    };
+
+    res.status(200).json({
+        success: true,
+        data: {
+            user: safeUser,
+            token,
+        }
+    });
+});
+
+/**
  * @desc    find user by ID
  * @route   GET /user/me
  * @access  Public
