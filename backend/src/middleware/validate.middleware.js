@@ -1,67 +1,83 @@
-import logger from "../utils/logger.js"
+import logger from "../utils/logger.js";
 
 export const validate = (schema) => (req, res, next) => {
   try {
+    // BODY
     if (schema.body) {
-      const bodyResult = schema.body.safeParse(req.body);
-      if (!bodyResult.success) {
+      const result = schema.body.safeParse(req.body);
+
+      if (!result.success) {
         return res.status(400).json({
           success: false,
-          errors: bodyResult.error.issues.map((e) => e.message),
+          errors: result.error.issues.map(e => ({
+            field: e.path.join("."),
+            message: e.message
+          }))
         });
       }
-      req.body = bodyResult.data;
+
+      req.body = result.data;
     }
 
+    // PARAMS
     if (schema.params) {
-      const paramsResult = schema.params.safeParse(req.params);
-      if (!paramsResult.success) {
+      const result = schema.params.safeParse(req.params);
+
+      if (!result.success) {
         return res.status(400).json({
           success: false,
-          errors: paramsResult.error.issues.map((e) => e.message),
+          errors: result.error.issues.map(e => ({
+            field: e.path.join("."),
+            message: e.message
+          }))
         });
       }
-      req.params = paramsResult.data;
+
+      req.params = result.data;
     }
 
-    if (schema.user) {
-      const userResult = schema.user.safeParse(req.user);
-      if (!userResult.success) {
+    // QUERY 
+    if (schema.query) {
+      const result = schema.query.safeParse(req.query);
+
+      if (!result.success) {
         return res.status(400).json({
           success: false,
-          errors: userResult.error.issues.map((e) => e.message),
+          errors: result.error.issues.map(e => ({
+            field: e.path.join("."),
+            message: e.message
+          }))
         });
       }
-      req.user = userResult.data;
+
+      req.query = result.data;
     }
+
+    // USER
+    if (schema.user) {
+      const result = schema.user.safeParse(req.user);
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          errors: result.error.issues.map(e => ({
+            field: e.path.join("."),
+            message: e.message
+          }))
+        });
+      }
+
+      req.user = result.data;
+    }
+
     next();
+
   } catch (err) {
-    logger.log("Validation Error: ", err);
+    logger.error("Validation middleware error:", err);
+
     return res.status(500).json({
       success: false,
-      msg: "Validation Failed",
+      message: "Internal validation error"
     });
   }
-};
-
-export const validateFile = (schema) => (req, res, next) => {
-  if (!schema.file) return next();
-
-  if (!req.file) {
-    return res.status(400).json({
-      success: false,
-      errors: ["File is required"],
-    });
-  }
-
-  const result = schema.file.safeParse(req.file);
-
-  if (!result.success) {
-    return res.status(400).json({
-      success: false,
-      errors: result.error.issues.map((e) => e.message),
-    });
-  }
-
-  next();
 };
