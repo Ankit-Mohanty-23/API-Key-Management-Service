@@ -1,136 +1,130 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 //////////////////////////////////////////////////////
 // ENUMS
 //////////////////////////////////////////////////////
 
-enum UserRole {
+enum Role {
   ADMIN
-  PROVIDER
-  CONSUMER
+  USER
 }
 
-enum HttpMethod {
-  GET
-  POST
-  PUT
-  PATCH
-  DELETE
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum HealthStatus {
+  UP
+  DOWN
 }
 
 //////////////////////////////////////////////////////
-// USERS
+// MODELS
 //////////////////////////////////////////////////////
 
 model User {
-  id           String     @id @default(uuid())
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String
+  role     Role    @default(USER)
+  isActive Boolean @default(true)
+
+  apiKeys ApiKey[]
+  apiLogs ApiLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+model Service {
+  id           String  @id @default(uuid())
   name         String
-  email        String     @unique
-  passwordHash String
-  role         UserRole   @default(CONSUMER)
+  baseUrl      String
+  clientSecret String
+  isActive     Boolean @default(true)
 
   apiKeys      ApiKey[]
-  providedApis Api[]      @relation("ProviderApis")
-  usageLogs    ApiUsageLog[]
+  healthChecks HealthCheck[]
+  apiLogs      ApiLog[]
 
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
 }
-
-//////////////////////////////////////////////////////
-// API KEYS
-//////////////////////////////////////////////////////
 
 model ApiKey {
-  id         String   @id @default(uuid())
-  key        String   @unique
-  name       String?  // optional label like "Production key"
-  isActive   Boolean  @default(true)
+  id        String       @id @default(uuid())
+  keyHash   String       @unique
+  name      String
+  status    ApiKeyStatus @default(ACTIVE)
+  expiresAt DateTime?
 
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  usageLogs  ApiUsageLog[]
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
+  apiLogs ApiLog[]
 
-//////////////////////////////////////////////////////
-// APIS (registered by providers)
-//////////////////////////////////////////////////////
-
-model Api {
-  id          String        @id @default(uuid())
-  name        String
-  description String?
-  baseUrl     String
-
-  providerId  String
-  provider    User          @relation("ProviderApis", fields: [providerId], references: [id], onDelete: Cascade)
-
-  endpoints   ApiEndpoint[]
-  usageLogs   ApiUsageLog[]
-
-  isActive    Boolean       @default(true)
-
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-}
-
-//////////////////////////////////////////////////////
-// API ENDPOINTS
-//////////////////////////////////////////////////////
-
-model ApiEndpoint {
-  id          String      @id @default(uuid())
-  path        String      // /weather/current
-  method      HttpMethod
-
-  apiId       String
-  api         Api         @relation(fields: [apiId], references: [id], onDelete: Cascade)
-
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@unique([apiId, path, method])
-}
-
-//////////////////////////////////////////////////////
-// API USAGE LOGS (analytics + tracking)
-//////////////////////////////////////////////////////
-
-model ApiUsageLog {
-  id           String   @id @default(uuid())
-
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  apiKeyId     String
-  apiKey       ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
-
-  apiId        String
-  api          Api      @relation(fields: [apiId], references: [id], onDelete: Cascade)
-
-  endpoint     String
-  method       HttpMethod
-
-  statusCode   Int
-  responseTime Int      // ms
-
-  ipAddress    String?
-
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([apiId])
+  @@index([serviceId])
+  @@index([status])
+}
+
+model HealthCheck {
+  id String @id @default(uuid())
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  status         HealthStatus
+  responseTimeMs Int
+  checkedAt      DateTime     @default(now())
+
+  @@index([serviceId])
+  @@index([checkedAt])
+}
+
+model ApiLog {
+  id String @id @default(uuid())
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  apiKeyId String?
+  apiKey   ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  endpoint       String
+  method         String
+  statusCode     Int
+  responseTimeMs Int
+
+  createdAt DateTime @default(now())
+
+  @@index([serviceId])
   @@index([apiKeyId])
+  @@index([userId])
   @@index([createdAt])
 }
